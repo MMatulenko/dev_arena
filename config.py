@@ -16,8 +16,8 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "anthropic")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
-OPENAI_COACH_MODEL = os.getenv("OPENAI_COACH_MODEL", "gpt-5.2")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+ANTHROPIC_COACH_MODEL = os.getenv("ANTHROPIC_COACH_MODEL", "claude-3-5-sonnet-20241022")
+OPENAI_JUNIOR_MODEL = os.getenv("OPENAI_JUNIOR_MODEL", "gpt-4o-mini")
 
 # Dev-specific arena settings
 DEV_MAX_SPRINTS = int(os.getenv("DEV_MAX_SPRINTS", "8"))
@@ -57,10 +57,11 @@ _PRICING: dict[str, tuple[float, float]] = {
 
 def get_pricing() -> tuple[float, float]:
     """Return (price_per_m_input, price_per_m_output) for the active model."""
-    model = ANTHROPIC_MODEL if LLM_PROVIDER == "anthropic" else OPENAI_MODEL
+    model = ANTHROPIC_MODEL if LLM_PROVIDER == "anthropic" else OPENAI_JUNIOR_MODEL
     return _PRICING.get(model, (1.00, 5.00))
 
 
 def get_coach_pricing() -> tuple[float, float]:
     """Return pricing for the coach model."""
-    return _PRICING.get(OPENAI_COACH_MODEL, (3.00, 15.00))
+    model = ANTHROPIC_COACH_MODEL if LLM_PROVIDER == "anthropic" else OPENAI_COACH_MODEL
+    return _PRICING.get(model, (3.00, 15.00))

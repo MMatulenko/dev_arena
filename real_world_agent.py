@@ -11,7 +11,7 @@ from typing import Any
 
 from config import (
     ANTHROPIC_API_KEY, ANTHROPIC_MODEL,
-    OPENAI_API_KEY, OPENAI_MODEL,
+    OPENAI_API_KEY, OPENAI_JUNIOR_MODEL,
     LLM_PROVIDER, DEV_CODER_MAX_TOKENS, DEV_TEMPERATURE,
 )
 from dev_arena import CostLedger, SESSION_LEDGER
@@ -224,7 +224,7 @@ def run_real_world_sprint(task_name: str, task_description: str, skills_text: st
             logger.debug("RealWorldJunior (OpenAI) iteration %d", iteration + 1)
 
             resp = client.chat.completions.create(
-                model=OPENAI_MODEL,
+                model=OPENAI_JUNIOR_MODEL,
                 max_tokens=DEV_CODER_MAX_TOKENS,
                 temperature=DEV_TEMPERATURE,
                 messages=messages,

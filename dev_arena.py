@@ -25,9 +25,8 @@ from config import (
     DEV_MAX_RETRIES,
     DEV_TEMPERATURE,
     LLM_PROVIDER,
-    OPENAI_API_KEY,
-    OPENAI_MODEL,
-    OPENAI_COACH_MODEL,
+    OPENAI_API_KEY, OPENAI_MODEL,
+    OPENAI_COACH_MODEL, ANTHROPIC_COACH_MODEL,
     get_pricing,
     get_coach_pricing,
 )
@@ -402,10 +401,10 @@ def reflect_and_learn(task: Task, bad_code: str, error_traceback: str,
                       junior_reasoning: str = "",
                       sprint_ledger: CostLedger | None = None) -> tuple[str, str]:
     """
-    Senior Dev Coach (Sonnet) updates CORE_PRINCIPLES.md via forced tool use.
-    Guaranteed structured output — no JSON parsing errors possible.
+    Senior Dev Coach updates CORE_PRINCIPLES.md via forced tool use.
+    Dispatches to OpenAI or Anthropic based on LLM_PROVIDER.
     """
-    logger.info("Senior Dev Coach (%s) patching playbook for sprint %d...", OPENAI_COACH_MODEL, generation)
+    logger.info("Senior Dev Coach patching playbook for sprint %d...", generation)
     prompt = _COACH_PROMPT.format(
         task_description=task.description,
         junior_reasoning=junior_reasoning or "(no reasoning captured)",
@@ -414,50 +413,124 @@ def reflect_and_learn(task: Task, bad_code: str, error_traceback: str,
         skills=skills_text,
     )
 
+    provider = LLM_PROVIDER.lower()
+    
     try:
-        import openai
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        tool_name = ""
+        args = {}
+        
+        if provider == "openai":
+            import openai
+            client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
-        for attempt, delay in enumerate([0] + _API_RETRY_DELAYS):
-            if delay:
-                logger.warning("Coach API error — retrying in %ds (attempt %d)", delay, attempt)
-                time.sleep(delay)
-            try:
-                resp = client.chat.completions.create(
-                    model=OPENAI_COACH_MODEL,
-                    max_completion_tokens=DEV_COACH_MAX_TOKENS,
-                    messages=[
-                        {"role": "system", "content": _COACH_SYSTEM},
-                        {"role": "user", "content": prompt},
-                    ],
-                    tools=_COACH_TOOLS,
-                    tool_choice="required",
-                )
-                break
-            except Exception:
-                if attempt < len(_API_RETRY_DELAYS):
-                    continue
-                raise
+            for attempt, delay in enumerate([0] + _API_RETRY_DELAYS):
+                if delay:
+                    logger.warning("Coach API error — retrying in %ds (attempt %d)", delay, attempt)
+                    time.sleep(delay)
+                try:
+                    resp = client.chat.completions.create(
+                        model=OPENAI_COACH_MODEL,
+                        max_completion_tokens=DEV_COACH_MAX_TOKENS,
+                        messages=[
+                            {"role": "system", "content": _COACH_SYSTEM},
+                            {"role": "user", "content": prompt},
+                        ],
+                        tools=_COACH_TOOLS,
+                        tool_choice="required",
+                    )
+                    break
+                except Exception:
+                    if attempt < len(_API_RETRY_DELAYS):
+                        continue
+                    raise
 
-        in_tok = resp.usage.prompt_tokens
-        out_tok = resp.usage.completion_tokens
-        call_cost = SESSION_LEDGER.add(in_tok, out_tok, coach=True)
-        if sprint_ledger is not None:
-            sprint_ledger.add(in_tok, out_tok, coach=True)
+            in_tok = resp.usage.prompt_tokens
+            out_tok = resp.usage.completion_tokens
+            
+            call_cost = SESSION_LEDGER.add(in_tok, out_tok, coach=True)
+            if sprint_ledger is not None:
+                sprint_ledger.add(in_tok, out_tok, coach=True)
 
-        logger.info("Coach (%s) cost: $%.4f | session=$%.4f [in=%d out=%d tok]",
-                    OPENAI_COACH_MODEL, call_cost, SESSION_LEDGER.total_cost, in_tok, out_tok)
+            logger.info("Coach (%s) cost: $%.4f | session=$%.4f [in=%d out=%d tok]",
+                        OPENAI_COACH_MODEL, call_cost, SESSION_LEDGER.total_cost, in_tok, out_tok)
 
-        msg = resp.choices[0].message
-        tool_calls = msg.tool_calls
-        if not tool_calls:
-            logger.error("Coach returned no tool call — keeping existing playbook")
-            return skills_text, ""
+            msg = resp.choices[0].message
+            tool_calls = msg.tool_calls
+            if not tool_calls:
+                logger.error("Coach returned no tool call — keeping existing playbook")
+                return skills_text, ""
 
-        tc = tool_calls[0]
-        tool_name = tc.function.name
-        args = json.loads(tc.function.arguments)
+            tc = tool_calls[0]
+            tool_name = tc.function.name
+            args = json.loads(tc.function.arguments)
+            
+        elif provider == "anthropic":
+            from config import ANTHROPIC_COACH_MODEL
+            import anthropic
+            client_ant = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+            
+            # Anthropic tool schemas
+            ant_tools = [
+                {
+                    "name": t["function"]["name"],
+                    "description": t["function"]["description"],
+                    "input_schema": t["function"]["parameters"]
+                }
+                for t in _COACH_TOOLS
+            ]
+            
+            # Use cache control for the long prompt
+            system_block = [
+                {
+                    "type": "text",
+                    "text": _COACH_SYSTEM,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
+            
+            for attempt, delay in enumerate([0] + _API_RETRY_DELAYS):
+                if delay:
+                    logger.warning("Coach API error — retrying in %ds (attempt %d)", delay, attempt)
+                    time.sleep(delay)
+                try:
+                    resp = client_ant.messages.create(
+                        model=ANTHROPIC_COACH_MODEL,
+                        max_tokens=DEV_COACH_MAX_TOKENS,
+                        temperature=DEV_TEMPERATURE,
+                        system=system_block,
+                        messages=[{"role": "user", "content": prompt}],
+                        tools=ant_tools,
+                        tool_choice={"type": "any"},
+                        extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
+                    )
+                    break
+                except Exception:
+                    if attempt < len(_API_RETRY_DELAYS):
+                        continue
+                    raise
+                    
+            in_tok = resp.usage.input_tokens
+            out_tok = resp.usage.output_tokens
+            call_cost = SESSION_LEDGER.add(in_tok, out_tok, coach=True)
+            if sprint_ledger is not None:
+                sprint_ledger.add(in_tok, out_tok, coach=True)
 
+            logger.info("Coach (%s) cost: $%.4f | session=$%.4f [in=%d out=%d tok]",
+                        ANTHROPIC_COACH_MODEL, call_cost, SESSION_LEDGER.total_cost, in_tok, out_tok)
+
+            tool_uses = [b for b in resp.content if b.type == "tool_use"]
+            if not tool_uses:
+                logger.error("Coach returned no tool call — keeping existing playbook")
+                return skills_text, ""
+                
+            tc = tool_uses[0]
+            tool_name = tc.name
+            args = tc.input
+            
+        else:
+            raise ValueError("Unknown LLM_PROVIDER: %s" % provider)
+
+        # Apply the selected tool
         if tool_name == "no_update_required":
             logger.info("Coach Gatekeeper: [NO_UPDATE_REQUIRED] — %s", args.get("reason", ""))
             return skills_text, "guardrail rejected update"
@@ -470,7 +543,6 @@ def reflect_and_learn(task: Task, bad_code: str, error_traceback: str,
             
             # Auto-save the ticket to TOOL_TICKETS.md
             from datetime import datetime
-            import os
             from config import BASE_DIR
             
             ticket_path = BASE_DIR / "TOOL_TICKETS.md"

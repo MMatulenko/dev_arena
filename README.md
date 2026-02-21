@@ -18,7 +18,7 @@ When the Junior fails a task, the Senior Coach intervenes. The Coach analyzes th
 
 ```mermaid
 graph TD
-    A[Task Dispatched (SWE-bench)] --> B[Junior Agent loop]
+    A[Task Dispatched - SWE-bench] --> B[Junior Agent loop]
     B -->|Tool Usage| C[Docker Workspace]
     C -->|Run Tests| D{Tests Pass?}
     D -- Yes --> E[Task Complete!]
@@ -60,6 +60,7 @@ OPENAI_API_KEY=sk-your-openai-key-here
 ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
 LLM_PROVIDER=openai
 OPENAI_COACH_MODEL=gpt-5.2
+OPENAI_JUNIOR_MODEL=gpt-4o-mini
 ```
 
 ### 3. Running the Dev Arena (SWE-Bench)
