@@ -1,0 +1,15 @@
+# Core AI
+anthropic>=0.25.0
+openai>=1.30.0
+
+# Evaluation & Containers
+datasets>=2.19.0
+docker>=7.1.0
+
+# Chess Environment (Examples)
+chess>=1.10.0
+
+# Utilities
+python-dotenv>=1.0.0
+colorama>=0.4.6
+pydantic>=2.7.0

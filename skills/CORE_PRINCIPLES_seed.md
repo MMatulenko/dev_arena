@@ -1,0 +1,26 @@
+# Core Software Engineering Principles — Generation 0
+
+## 1. Robustness & Validation
+- Validate all external inputs before processing. Handle edge cases, None types, and empty collections explicitly at the top of the function before proceeding to main logic.
+- Fail fast with descriptive exceptions. Do not allow invalid state to propagate silently.
+
+## 2. State & Mutation
+- Never mutate data structures (lists, dictionaries, sets) while iterating over them. If mutation is required, iterate over a copy or build a new data structure.
+- Prefer explicit over implicit. Name variables, functions, and classes for what they represent in the domain, not just their data type or mechanical purpose.
+
+## 3. Resource Management
+- Always clean up resources predictably. Ensure file handles, database connections, and network sockets are closed properly, ideally using context managers (`with` statements).
+
+## 4. Agentic Tool Execution & Context
+- **Maximize Context Understanding (The Thoroughness Rule):** Be THOROUGH. Do not patch code blindly based on a single grep result. TRACE every symbol back to its definitions and usages so you fully understand it. Look past the first seemingly relevant result. EXPLORE alternative implementations, edge cases, and varied search terms until you have COMPREHENSIVE coverage of the topic. Keep searching new areas until you're CONFIDENT nothing important remains. Break multi-part questions into focused sub-queries.
+- **Read Before Write:** You MUST use the `file_read` tool at least once before editing. Never start coding without figuring out the existing codebase structure and conventions. Search for helpers and patterns before implementing new logic, even if it seems simple.
+- **Verify Tool Execution Immediately (MANDATORY):** After EVERY code modification tool invocation (file_patch, file_write, etc.), IMMEDIATELY read back the modified section using file_read to confirm the change was actually applied. Do NOT proceed to the next step, do NOT run tests, do NOT move forward in any way until verification is complete. Do not assume tool success based on status messages alone; pattern-matching tools may fail silently due to whitespace, line endings, or context mismatches. If verification shows the change was not applied, try alternative tools or approaches (e.g., different string boundaries, more context, alternative tools) before proceeding.
+- **Tool Priority Order:** Before making ANY tool call, mentally list all tools available for the task. ONLY use a generic tool (e.g. `shell`) if no more specific tool exists (e.g. `grep`, `file_read`, `glob_search`). Specifically: NEVER use `shell` with `cat` to read a file — use `file_read`. NEVER use `shell` with `grep` — use the `grep` tool. NEVER use `shell` with `find` — use `glob_search`. This prevents escaping bugs, truncation, and wasted context.
+- **Parallel Tool Calls:** If you intend to call multiple tools and there are no dependencies between the tool calls, make all of the independent tool calls in parallel to maximize speed. For example, when reading 3 files, run 3 tool calls in parallel to read all 3 files into context at the same time.
+
+## 5. Making Code Changes
+- **No Redundant Comments:** Do NOT add comments that just narrate what the code does. Avoid obvious, redundant comments like `// Import the module` or `// Increment the counter`. Comments should only explain non-obvious intent, trade-offs, or constraints that the code itself cannot convey. NEVER explain the change you are making in code comments (e.g. do not write `# fixed bug by changing X to Y`).
+- **Match the Existing Style:** When editing a code file, pay attention to the surrounding code and try to match the exact existing coding style. Follow existing approaches and use already used libraries and patterns.
+- **Verify Fixes with Multiple Strategies:** When the primary test execution path is blocked (build failures, environment issues), employ secondary verification: (1) examine existing test cases to understand expected behavior and ensure the fix aligns, (2) manually trace the fixed code with concrete input values to verify correctness, (3) check for parallel patterns in the same codebase to confirm the fix matches established conventions. Never abandon verification; pivot to alternative methods.
+- **Cover All Operator/Code Paths After a Fix:** When a bug is found in one branch of a function (e.g., the `right` ndarray branch), immediately audit every sibling branch and every analogous function that handles the same inputs for the same class of bug. A bug in one branch of a dispatch pattern (isinstance checks, operator maps, etc.) almost always has a mirror in the other branches. Do not stop after fixing the branch that triggered the visible failure.
+- **Trace Tokens From Parser to Consumer:** When you broaden what a parser or regex accepts (e.g., making a pattern case-insensitive), immediately grep for every downstream site that consumes the newly-accepted tokens and update those sites to handle the full new input space. A partial fix that updates the parser but not its consumers will silently break at runtime.
