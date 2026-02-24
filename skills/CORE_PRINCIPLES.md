@@ -3,6 +3,7 @@
 ## 1. Robustness & Validation
 - Validate all external inputs before processing. Handle edge cases, None types, and empty collections explicitly at the top of the function before proceeding to main logic.
 - **Normalize before you validate:** When consuming external records, first convert acceptable alternate representations into a canonical type (e.g., trim/parse numeric strings) and only then apply strict validation. Use explicit, well-scoped parsing rules and skip/raise on ambiguous values.
+- **Avoid silent undercounting in aggregations:** If you filter invalid records before computing a metric, ensure your validity rules include all *intended* representations (e.g., numeric strings). Prefer a small, explicit coercion function and treat only truly unparseable values as invalid.
 - Fail fast with descriptive exceptions when the contract requires it. Do not allow invalid state to propagate silently.
 
 ## 2. State & Mutation
