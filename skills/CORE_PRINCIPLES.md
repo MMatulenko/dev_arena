@@ -2,7 +2,8 @@
 
 ## 1. Robustness & Validation
 - Validate all external inputs before processing. Handle edge cases, None types, and empty collections explicitly at the top of the function before proceeding to main logic.
-- Fail fast with descriptive exceptions. Do not allow invalid state to propagate silently.
+- **Normalize before you validate:** When consuming external records, first convert acceptable alternate representations into a canonical type (e.g., trim/parse numeric strings) and only then apply strict validation. Use explicit, well-scoped parsing rules and skip/raise on ambiguous values.
+- Fail fast with descriptive exceptions when the contract requires it. Do not allow invalid state to propagate silently.
 
 ## 2. State & Mutation
 - Never mutate data structures (lists, dictionaries, sets) while iterating over them. If mutation is required, iterate over a copy or build a new data structure.
