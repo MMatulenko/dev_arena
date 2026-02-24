@@ -109,3 +109,13 @@ Orchestrates the sprint cycle: Junior generates code → CI tests → on failure
 - **Playbook patches** are surgical find-and-replace ops, not full rewrites. If `old_text` isn't found, the new text is appended as a fallback.
 - **The `skills/` directory is its own git repo**, separate from the parent project. Don't confuse the two.
 - **Test timeouts** use `signal.SIGALRM` (Unix only) to kill runaway code.
+
+## Cursor Cloud specific instructions
+
+- **Dependencies**: `requirements.txt` exists. Run `pip install -r requirements.txt` to install all Python deps (the existing AGENTS.md note about no requirements.txt is outdated).
+- **API keys**: `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` must be set as environment variables (injected via Cursor Secrets). `LLM_PROVIDER` env var selects which provider to use (`openai` or `anthropic`).
+- **Config fix**: `config.py` was missing `OPENAI_MODEL` and `OPENAI_COACH_MODEL` exports that `dev_arena.py` imports. These were added to `config.py` (deriving `OPENAI_MODEL` from `OPENAI_JUNIOR_MODEL` and defaulting `OPENAI_COACH_MODEL` to `gpt-5.2`). Without this fix, the entire codebase fails to import.
+- **No formal test suite**: There is no pytest/unittest suite for the framework itself. The project IS a test harness — validation is done by running tasks (`python dev_loop.py --task average_age --budget 0.10`).
+- **No linter config**: No `.flake8`, `pyproject.toml`, or `ruff.toml` exists. `ruff` can be used for ad-hoc linting (`python3 -m ruff check *.py`); existing warnings are pre-existing unused imports.
+- **The `skills/` directory**: This is a separate git repo from the workspace root. The system auto-initializes it on first run via `_init_git()`. Do not manually modify its git state.
+- **Quick smoke test**: `python dev_loop.py --task average_age --budget 0.05 --sprints 1` runs one sprint (~20s, ~$0.001) to verify the full loop works.

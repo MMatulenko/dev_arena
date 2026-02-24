@@ -18,6 +18,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5")
 ANTHROPIC_COACH_MODEL = os.getenv("ANTHROPIC_COACH_MODEL", "claude-3-5-sonnet-20241022")
 OPENAI_JUNIOR_MODEL = os.getenv("OPENAI_JUNIOR_MODEL", "gpt-4o-mini")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", OPENAI_JUNIOR_MODEL)
+OPENAI_COACH_MODEL = os.getenv("OPENAI_COACH_MODEL", "gpt-5.2")
 
 # Dev-specific arena settings
 DEV_MAX_SPRINTS = int(os.getenv("DEV_MAX_SPRINTS", "8"))
